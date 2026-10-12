@@ -9,6 +9,7 @@ import type { Grid, Level } from "../levelFormat";
 import { ROAD, WALKABLE } from "../rules";
 import { freshLevel } from "../freshLevel";
 import { difficulty, settings } from "../settings";
+import { audio } from "../audio";
 
 type Side = "player" | "enemy";
 type Obstacle = Phaser.GameObjects.GameObject & { x: number; y: number; getData(k: string): any; setData(k: string, v: any): any };
@@ -157,6 +158,7 @@ export class GameScene extends Phaser.Scene {
       this.catsCaught++;
     }
     this.registry.set("boss", null);
+    audio.setMood("calm"); // a new game (or a rebuild before the boss): the desert music
     this.syncHud();
     this.scene.launch("hud", { quiet: !!resume });
 
@@ -234,7 +236,7 @@ export class GameScene extends Phaser.Scene {
   removeEnemy(e: Enemy) {
     if (!e.active) return;
     this.markGone(e);
-    if (e === this.boss) { this.registry.set("boss", null); this.fx.floatingText(e.x, e.y - 60, "THE PHARAOH HAS FALLEN!", "#f6d77a"); }
+    if (e === this.boss) { this.registry.set("boss", null); audio.play("bossDown"); audio.setMood("calm"); this.fx.floatingText(e.x, e.y - 60, "THE PHARAOH HAS FALLEN!", "#f6d77a"); }
     this.addScore(e.score);
     this.fx.floatingText(e.x, e.y - 20, `${e.score}`);
     e.destroy();
@@ -782,6 +784,7 @@ export class GameScene extends Phaser.Scene {
 
   private recruitCat(cat: Phaser.GameObjects.Image) {
     this.markGone(cat);
+    audio.play("meow");
     this.tweens.killTweensOf(cat);
     this.army.push(cat);
     this.catsCaught++;
@@ -913,6 +916,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   bossAppeared(boss: Chariot) {
+    audio.play("bossHorn");
+    audio.setMood("boss");
     this.registry.set("boss", { name: "Pharaoh", hp: boss.hp, max: boss.maxHp });
     this.events.emit("boss");
     this.cameras.main.shake(400, 0.006);
@@ -925,8 +930,11 @@ export class GameScene extends Phaser.Scene {
 
   onEnemyKilled(e: Enemy) {
     this.markGone(e);
+    audio.play(e.armored ? "bigExplosion" : "enemyDeath");
     if (e === this.boss) {
       this.registry.set("boss", null);
+      audio.play("bossDown");
+      audio.setMood("calm");
       this.fx.floatingText(e.x, e.y - 60, "THE PHARAOH HAS FALLEN!", "#f6d77a");
     }
     this.addScore(e.score);
@@ -964,6 +972,7 @@ export class GameScene extends Phaser.Scene {
 
   fireBullet(side: Side, x: number, y: number, angle: number, speed: number, range: number) {
     if (side === "enemy") speed *= this.slowFactor(this.time.now);
+    audio.play(side === "player" ? "shot" : "enemyShot");
     const group = side === "player" ? this.playerBullets : this.enemyBullets;
     const b = group.create(x, y, side === "player" ? "ankh_bolt" : "bullet_enemy") as Phaser.Physics.Arcade.Image;
     b.setDepth(DEPTH.bullets).setRotation(angle + Math.PI / 2).setScale(side === "player" ? 0.75 : 0.45).setBlendMode(Phaser.BlendModes.ADD);
@@ -975,6 +984,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   fireShell(x: number, y: number, angle: number, speed: number, range: number) {
+    audio.play("shell");
     const s = this.shells.create(x, y, "catbomb") as Phaser.Physics.Arcade.Image; // spat by a sphinx
     s.setDepth(DEPTH.bullets).setRotation(angle).setScale(1.1).setData({ x0: x, y0: y, range });
     this.physics.velocityFromRotation(angle, speed, s.body!.velocity);
@@ -982,6 +992,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   lobGrenade(side: Side, x0: number, y0: number, x1: number, y1: number) {
+    audio.play("lob");
     const g = this.add.image(x0, y0, side === "player" ? "sandbomb" : "grenade").setDepth(DEPTH.bullets);
     const shadow = this.add.image(x0, y0, "shadow").setScale(0.3).setDepth(DEPTH.unitShadow);
     const state = { t: 0 };
@@ -1007,6 +1018,7 @@ export class GameScene extends Phaser.Scene {
 
   /** The player's grenade: a sand cloud that blinds, slows and wears down enemies inside it. */
   sandstorm(x: number, y: number) {
+    audio.play("sandstorm");
     this.fx.sandstorm(x, y, SANDSTORM.radius, SANDSTORM.durationMs);
     const ticks = Math.floor(SANDSTORM.durationMs / SANDSTORM.tickMs);
     const tick = () => {
@@ -1023,6 +1035,7 @@ export class GameScene extends Phaser.Scene {
   /** Area damage. Player grenades hurt enemies; enemy grenades hurt the player; barrels hurt everyone. */
   explodeAt(x: number, y: number, radius: number, damage: number, side: Side | "all", size: number) {
     this.fx.explosion(x, y, size);
+    audio.play(size >= 1.4 ? "bigExplosion" : "explosion");
     const inRange = (o: { x: number; y: number }) => Phaser.Math.Distance.Between(x, y, o.x, o.y) < radius;
     if (side !== "enemy") for (const e of [...this.enemies]) if (e.active && inRange(e)) e.damage(damage, false);
     if (side !== "player" && this.player.alive && inRange(this.player)) this.hurtPlayer();
@@ -1065,7 +1078,7 @@ export class GameScene extends Phaser.Scene {
     o.destroy();
     this.setTerrainAt(x, y, "..");
     if (kind === "barrel") this.explodeAt(x, y, BARREL.radius, BARREL.damage, "all", 1.4);
-    else this.fx.explosion(x, y, 0.4);
+    else { this.fx.explosion(x, y, 0.4); audio.play("explosion"); }
   }
 
   // ---------------------------------------------------------------- player
@@ -1074,6 +1087,7 @@ export class GameScene extends Phaser.Scene {
     if (this.registry.get("invincible") || this.time.now < this.shieldUntil || this.cinematic) return;
     if (!this.player.alive || this.time.now < this.player.invulnerableUntil || this.state !== "playing") return;
     this.player.alive = false;
+    audio.play("playerDeath");
     this.player.body.setVelocity(0, 0);
     this.player.setVisible(false);
     this.fx.explosion(this.player.x, this.player.y, 0.5);
@@ -1081,7 +1095,7 @@ export class GameScene extends Phaser.Scene {
     this.syncHud();
     if (this.lives <= 0) {
       this.state = "over";
-      this.time.delayedCall(900, () => this.events.emit("gameover", { won: false, score: this.score }));
+      this.time.delayedCall(900, () => { audio.play("gameOver"); this.events.emit("gameover", { won: false, score: this.score }); });
       return;
     }
     this.time.delayedCall(1200, () => this.respawn());
@@ -1104,6 +1118,7 @@ export class GameScene extends Phaser.Scene {
   private collect(item: Phaser.Physics.Arcade.Image) {
     if (!item.active) return;
     this.markGone(item);
+    audio.play(item.getData("kind") === "pow" ? "rescue" : "pickup");
     if (item.getData("kind") === "pow") {
       this.powsRescued++;
       this.addScore(POW_SCORE);
@@ -1121,6 +1136,7 @@ export class GameScene extends Phaser.Scene {
 
   private win() {
     this.state = "won";
+    audio.play("win");
     this.player.body.setVelocity(0, 0);
     this.events.emit("gameover", { won: true, score: this.score + this.lives * 500 });
   }

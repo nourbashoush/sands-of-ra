@@ -10,6 +10,9 @@ export const settings = {
   screenShake: true,
   /** Pause when the window loses focus. */
   pauseOnBlur: true,
+  sound: true,
+  volume: "medium" as "low" | "medium" | "high",
+  music: "medium" as "off" | "low" | "medium" | "high",
 };
 
 const DIFFICULTY: Record<Difficulty, { lives: number; fireEvery: number }> = {

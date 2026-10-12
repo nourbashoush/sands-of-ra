@@ -45,6 +45,7 @@ Then open http://localhost:5173 in your browser.
 | Space or right-click | sandstorm |
 | E | summon the gods |
 | P or Esc | pause (resume, new game, settings) |
+| M | sound on/off |
 | R | new game |
 
 ## Credits

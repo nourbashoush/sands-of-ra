@@ -3,6 +3,7 @@ import { ENEMIES, SANDSTORM, TILE } from "../config";
 import { DEPTH } from "../fx";
 import type { GameScene } from "../scenes/GameScene";
 import { difficulty } from "../settings";
+import { audio } from "../audio";
 
 // Enemy behaviours, hard-coded per type (workshop exercise 1 starting point).
 
@@ -55,11 +56,13 @@ export abstract class Enemy extends Phaser.Physics.Arcade.Sprite {
   damage(amount: number, fromBullet: boolean) {
     if (!this.active || this.sealed) return;
     if (fromBullet && this.armored) {
+      audio.play("ping");
       this.world.fx.impact(this.x, this.y);
       return;
     }
     this.hp -= amount;
     this.world.fx.hitFlash(this);
+    if (this.hp > 0) audio.play("hit");
     if (this.hp <= 0) this.die();
   }
 
@@ -268,6 +271,7 @@ export class Chariot extends Enemy {
   private dir = 1;
   private nextPot = 0;
   private nextDust = 0;
+  private nextHoof = 0;
   private announced = false;
 
   constructor(world: GameScene, x: number, y: number) {
@@ -292,6 +296,12 @@ export class Chariot extends Enemy {
     if (this.x < cfg.minX) this.dir = 1;
     this.body.setVelocity(this.dir * (this.enraged ? cfg.rageSpeed : cfg.speed), 0);
     this.setFlipX(this.dir < 0);
+    if (time > this.nextHoof) { // galloping horses and rumbling wheels, louder as it gets closer
+      this.nextHoof = time + (this.enraged ? 170 : 240);
+      const near = Phaser.Math.Clamp(1 - this.distanceTo(player) / 1000, 0.12, 1);
+      audio.play("hoof", 0, near);
+      audio.play("wheels", 0, near);
+    }
     if (time > this.nextDust) {
       this.nextDust = time + 90;
       this.world.fx.dust(this.x - this.dir * 50, this.y + Phaser.Math.Between(-30, 30));
@@ -318,7 +328,10 @@ export class Chariot extends Enemy {
     super.damage(amount, fromBullet);
     if (!this.active) return; // died: the scene clears the boss bar
     this.world.registry.set("boss", { name: ENEMIES.k1.name, hp: this.hp, max: this.maxHp });
-    if (!wasEnraged && this.enraged) this.world.fx.floatingText(this.x, this.y - 60, "THE PHARAOH IS ENRAGED!", "#ff7a5a");
+    if (!wasEnraged && this.enraged) {
+      this.world.fx.floatingText(this.x, this.y - 60, "THE PHARAOH IS ENRAGED!", "#ff7a5a");
+      audio.play("bossRoar");
+    }
   }
 
   protected die() {

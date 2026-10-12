@@ -5,6 +5,7 @@ import { buildPrompt } from "../oracle/prompt";
 import { applyReply, parseReply } from "../oracle/reply";
 import { checkLevel } from "../rules";
 import type { GameScene } from "../scenes/GameScene";
+import { audio } from "../audio";
 import { callAgent } from "./agent";
 import { GODS, POWERS, PRANKS, type Decree, type GodName, type Power } from "./catalog";
 import { cloudBank, godSvg, SCALES } from "./gods";
@@ -204,6 +205,8 @@ export class Council {
     const gs = this.scene;
     if (this.state !== "closed" || !gs || !this.game.scene.isActive("game") || gs.cinematic || !gs.snapshot()) return;
     this.state = "asking";
+    audio.play("councilOpen");
+    audio.setMood("council");
     this.game.registry.set("timeStopped", true); // the HUD and game honour this flag
     this.game.scene.pause("game");
     const canvas = this.game.canvas;
@@ -313,6 +316,7 @@ export class Council {
     const pasted = ((this.game.registry.get("councilPaste") as string | undefined) ?? "").trim(); // console: skip the agent
 
     this.state = "deliberating";
+    audio.play("wish");
     this.root!.className = "deliberating";
     const started = performance.now(), expected = this.avg(this.model);
     const bar = this.root!.querySelector<SVGCircleElement>(".ring .bar")!;
@@ -361,6 +365,7 @@ export class Council {
     this.pending = { decree, granted };
     this.state = "verdict";
     root.className = granted ? "verdict granted" : "verdict refused";
+    audio.play(granted ? "grant" : "refuse");
     root.querySelector(".scales")!.setAttribute("data-tilt", granted ? "grant" : "refuse");
     // unmistakable: a coloured flash and a full-width banner, then the scene behind it
     const banner = root.querySelector<HTMLElement>(".verdict-banner")!;
@@ -453,6 +458,8 @@ export class Council {
   close(after?: () => void) {
     if (!this.root || this.state === "leaving" || this.state === "closed") return;
     this.state = "leaving";
+    audio.play("councilClose");
+    audio.leaveCouncil();
     const root = this.root;
     root.classList.add("leaving");
     this.game.canvas.classList.remove("cn-frozen");

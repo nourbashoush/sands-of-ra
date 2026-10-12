@@ -4,6 +4,7 @@ import type { Level } from "../levelFormat";
 import { freshLevel } from "../freshLevel";
 import { closeMenu, openMenu } from "../menu";
 import { settings } from "../settings";
+import { audio } from "../audio";
 import { FONT } from "../style";
 
 type Boss = { name: string; hp: number; max: number } | null;
@@ -100,6 +101,8 @@ export class HudScene extends Phaser.Scene {
     if (this.ended || this.registry.get("timeStopped")) return; // the council of the gods holds time still
     const game = this.scene.get("game");
     this.paused = !this.paused;
+    audio.play(this.paused ? "pause" : "resume");
+    audio.setPaused(this.paused); // the music stops while paused
     if (this.paused) {
       game.scene.pause();
       this.currentBanner?.destroy();
@@ -113,6 +116,7 @@ export class HudScene extends Phaser.Scene {
   /** A fresh game: the level file as it is on disk, a new run from the bottom. */
   private newGame() {
     this.paused = false;
+    audio.setPaused(false);
     closeMenu();
     const game = this.scene.get("game");
     void freshLevel(this.registry).then(() => game.scene.restart({})); // {}: not the last { resume } (Phaser keeps old data)

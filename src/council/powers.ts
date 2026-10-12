@@ -3,6 +3,7 @@ import { FRAME, RES, STAT_BAR, TILE, VIEW_H, VIEW_W } from "../config";
 import { Bunker, Tank, type Enemy } from "../entities/enemies";
 import { DEPTH } from "../fx";
 import type { GameScene } from "../scenes/GameScene";
+import { audio } from "../audio";
 import { GODS, POWERS, type Decree, type Power, type Prank } from "./catalog";
 
 // The divine powers, played on the LIVE game: every target is looked up by id at the moment it is hit,
@@ -153,6 +154,7 @@ async function lockOn(s: GameScene, e: { x: number; y: number; displayWidth: num
     g.beginPath().moveTo(sx * r * 1.25, sy * (r * 1.25 - L)).lineTo(sx * r * 1.25, sy * r * 1.25).lineTo(sx * (r * 1.25 - L), sy * r * 1.25).strokePath();
   }
   g.setScale(2.2).setAlpha(0).setRotation(0.6);
+  audio.play("lockOn", 200);
   await tween(s, { targets: g, scale: 1, alpha: 1, rotation: 0, duration: 300, ease: "Cubic.easeOut" });
   await wait(s, 120);
   void tween(s, { targets: g, alpha: 0, scale: 0.7, duration: 160 }).then(() => g.destroy());
@@ -196,6 +198,7 @@ async function smite(s: GameScene, ids: number[]) {
       pts.push(new Phaser.Math.Vector2(Phaser.Math.Linear(sx, e.x, k) + (i && i < n ? rnd(-26, 26) : 0), Phaser.Math.Linear(sy, e.y, k)));
     }
     for (const [w, c, a] of [[22, C.yellow, 0.22], [10, C.yellow, 1], [4, C.white, 1]] as const) g.lineStyle(w, c, a).strokePoints(pts);
+    audio.play("smite");
     flash(s, C.white, 0.28, 120);
     s.cameras.main.shake(140, 0.004);
     starburst(s, e.x, e.y, 46, C.orange);
@@ -212,6 +215,7 @@ async function entomb(s: GameScene, ids: number[]) {
     const size = e instanceof Tank ? TILE * 2 : e instanceof Bunker ? TILE * 1.4 : TILE * 1.05;
     const { x, y } = e;
     s.sealEnemy(e);
+    audio.play("entomb");
     e.setTint(0x9a8f86);
     // stone courses rise around it, one after another
     const layers: Phaser.GameObjects.Graphics[] = [];
@@ -253,6 +257,7 @@ async function banish(s: GameScene, ids: number[]) {
     for (let k = 0; k < 3; k++) swirl.lineStyle(3, C.pink, 0.8).beginPath().arc(0, 0, r * (0.5 + k * 0.2), k * 2, k * 2 + 2.2).strokePath();
     portal.add([disc, swirl]);
     s.tweens.add({ targets: swirl, rotation: Math.PI * 6, duration: 1600 });
+    audio.play("banish");
     await tween(s, { targets: portal, scale: 1, duration: 260, ease: "Back.easeOut" });
     e.hideParts(true);
     await tween(s, { targets: e, angle: e.angle + 720, scale: 0, y: e.y + 6, duration: 560, ease: "Cubic.easeIn" });
@@ -266,6 +271,7 @@ async function banish(s: GameScene, ids: number[]) {
 async function transform(s: GameScene, ids: number[]) {
   await eachTarget(s, ids, C.pink, async (e) => {
     puff(s, e.x, e.y, [C.pink, C.yellow, C.teal, C.ink], 9, 40);
+    audio.play("transform");
     await wait(s, 160);
     if (!e.active) return;
     const cat = s.enemyToCat(e);
@@ -287,6 +293,7 @@ async function purify(s: GameScene) {
   feather.lineStyle(4, C.indigo, 0.8).lineBetween(-120, 0, 110, 0);
   for (let k = -90; k < 90; k += 18) feather.lineStyle(2, C.indigo, 0.25).lineBetween(k, -20, k + 10, 0);
   feather.setPosition(x0 - 140, top + 120).setRotation(0.5);
+  audio.play("purify");
   const sweep = tween(s, { targets: feather, x: x1 + 140, y: top + VIEW_H - 160, rotation: 0.2, duration: 1000, ease: "Sine.easeInOut" });
   await wait(s, 300);
   const spots = s.clearProjectiles();
@@ -307,6 +314,7 @@ async function purify(s: GameScene) {
 /** A hexagonal sun-shield that follows the pharaoh until it runs out. */
 async function shield(s: GameScene, seconds: number) {
   await spotlight(s, C.yellow);
+  audio.play("shield");
   s.setShield(seconds * 1000);
   const p = s.player;
   const g = s.add.graphics().setDepth(DEPTH.units + 2);
@@ -331,6 +339,7 @@ async function shield(s: GameScene, seconds: number) {
 /** Gifts rain from the sky and fly up into the top bar. */
 async function bless(s: GameScene, a: Extract<Power, { power: "bless" }>) {
   await spotlight(s, C.orange);
+  audio.play("bless");
   const { top } = view(s), p = s.player;
   const icons: Phaser.GameObjects.GameObject[] = [];
   const drop = (obj: Phaser.GameObjects.Container, i: number) => {
@@ -357,6 +366,7 @@ async function bless(s: GameScene, a: Extract<Power, { power: "bless" }>) {
 /** Cats drift down under little clouds and join the army. */
 async function summonCats(s: GameScene, n: number) {
   await spotlight(s, C.pink);
+  audio.play("summon");
   const { top } = view(s), p = s.player;
   const jobs = Array.from({ length: n }, async (_, i) => {
     const sx = p.x + rnd(-260, 260), a = rnd(0, Math.PI * 2), d = rnd(50, 140);
@@ -377,6 +387,7 @@ async function summonCats(s: GameScene, n: number) {
 
 async function slowTime(s: GameScene, seconds: number) {
   await spotlight(s, C.teal);
+  audio.play("slowTime");
   const { cx, cy, top } = view(s);
   const tint = s.add.rectangle(0, top, VIEW_W, VIEW_H, C.violet, 0).setOrigin(0).setDepth(TOP - 2);
   const glass = s.add.graphics({ x: cx, y: cy }).setDepth(TOP);
@@ -396,6 +407,7 @@ async function slowTime(s: GameScene, seconds: number) {
 /** The Eye of Ra opens over the screen and the darkness peels away. */
 async function reveal(s: GameScene, seconds: number) {
   await spotlight(s, C.teal);
+  audio.play("reveal");
   const { cx, cy } = view(s);
   const eye = s.add.graphics({ x: cx, y: cy }).setDepth(TOP);
   eye.fillStyle(C.ink, 1).fillEllipse(0, 0, 220, 110);
@@ -424,6 +436,7 @@ async function defeatBoss(s: GameScene) {
   await lockOn(s, boss, C.orange);
   const { top } = view(s);
   const sun = s.add.container(boss.x, top - 140).setDepth(TOP);
+  audio.play("sunFall");
   const rays = s.add.graphics();
   for (let i = 0; i < 12; i++) {
     const a = (i / 12) * Math.PI * 2;
@@ -447,6 +460,7 @@ async function defeatBoss(s: GameScene) {
 /** Ra lifts the pharaoh in a column of light, rushes the camera over the land, and sets them down. */
 async function ascend(s: GameScene, to: Extract<Power, { power: "ascend" }>["to"]) {
   await spotlight(s, C.orange);
+  audio.play("ascend");
   const p = s.player, dest = s.landingSpot(to);
   const column = (x: number, y: number) => {
     const { top } = view(s);
@@ -499,6 +513,7 @@ async function reshape(s: GameScene, a: Extract<Power, { power: "reshape" }>, ho
   const y0 = a.rows[0] * TILE, h = (a.rows[1] - a.rows[0] + 1) * TILE;
   await focusOn(s, y0 + h / 2, 0.5, true); // glide to the rows being rewritten
   const scroll = s.add.graphics({ x: 0, y: y0 }).setDepth(TOP - 1); // unrolls downward from the first row
+  audio.play("reshape");
   scroll.fillStyle(C.indigo, 0.25).fillRoundedRect(x0 + 6, 8, x1 - x0, h, 12);
   scroll.fillStyle(C.sandLight, 0.92).fillRoundedRect(x0, 0, x1 - x0, h, 12);
   for (let y = 24; y < h - 16; y += 22) {
@@ -570,14 +585,16 @@ function camel(s: GameScene) {
 export function performPrank(s: GameScene, prank: Prank) {
   const p = s.player, { top } = view(s);
   if (prank === "tiny") {
+    audio.play("boing");
     s.tweens.add({ targets: p, scale: 0.5, duration: 300, ease: "Back.easeOut", yoyo: true, hold: 6000 });
     say(s, p.x, p.y - 40, "tiny pharaoh!", "#ffd23f");
   } else if (prank === "frog") {
     p.setTint(0x7ed957);
-    for (let i = 0; i < 4; i++) s.time.delayedCall(i * 1400, () => say(s, s.player.x + rnd(-20, 20), s.player.y - 40, "ribbit", "#7ed957"));
+    for (let i = 0; i < 4; i++) s.time.delayedCall(i * 1400, () => { say(s, s.player.x + rnd(-20, 20), s.player.y - 40, "ribbit", "#7ed957"); audio.play("ribbit"); });
     s.time.delayedCall(6000, () => s.player?.clearTint());
-  } else if (prank === "camel") camel(s);
+  } else if (prank === "camel") { camel(s); audio.play("camel"); audio.play("camel", 2500); }
   else if (prank === "confetti") {
+    audio.play("boing");
     for (let i = 0; i < 90; i++) {
       const bit = s.add.rectangle(rnd(0, VIEW_W), top - rnd(0, 200), rnd(5, 9), rnd(8, 14), Phaser.Utils.Array.GetRandom([C.sand, C.sandDark, C.yellow, C.pink, C.teal])).setDepth(TOP);
       void tween(s, { targets: bit, y: top + VIEW_H + 40, x: bit.x + rnd(-60, 60), angle: rnd(-540, 540), duration: rnd(1600, 2800), ease: "Sine.easeIn" }).then(() => bit.destroy());
@@ -588,7 +605,7 @@ export function performPrank(s: GameScene, prank: Prank) {
     void tween(s, {
       targets: k, t: 1, duration: 800, ease: "Linear",
       onUpdate: () => { cat.setPosition(Phaser.Math.Linear(from.x, s.player.x, k.t), Phaser.Math.Linear(from.y, s.player.y, k.t) - Math.sin(k.t * Math.PI) * 120).rotation += 0.3; },
-    }).then(() => { cat.destroy(); s.spawnArmyCat(s.player.x, s.player.y + 20); say(s, s.player.x, s.player.y - 40, "catch!", "#ff5e7e"); });
+    }).then(() => { cat.destroy(); audio.play("meow"); s.spawnArmyCat(s.player.x, s.player.y + 20); say(s, s.player.x, s.player.y - 40, "catch!", "#ff5e7e"); });
   }
 }
 

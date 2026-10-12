@@ -1,4 +1,5 @@
 import type Phaser from "phaser";
+import { audio } from "./audio";
 import { settings, type Difficulty } from "./settings";
 
 // The pause / game-over menu: Resume, New game (or Play again), Settings. A flat card over the game,
@@ -90,6 +91,7 @@ function showMain(opts: MenuOptions) {
   c.querySelector("p")!.textContent = opts.subtitle;
   c.addEventListener("click", (e) => {
     const act = (e.target as HTMLElement).closest<HTMLElement>("[data-act]")?.dataset.act;
+    if (act === "new" || act === "settings") audio.play("click");
     if (act === "resume") opts.onResume?.();
     if (act === "new") opts.onNewGame();
     if (act === "settings") showSettings(opts);
@@ -106,16 +108,23 @@ function showSettings(opts: MenuOptions) {
     <div class="row"><div>Line of sight<small>darkness behind walls</small></div>${onOff("lineOfSight")}</div>
     <div class="row"><div>Screen shake</div>${onOff("screenShake")}</div>
     <div class="row"><div>Pause when away<small>when the window loses focus</small></div>${onOff("pauseOnBlur")}</div>
+    <div class="row"><div>Sound<small>or press M any time</small></div>${onOff("sound")}</div>
+    <div class="row"><div>Volume<small>sound effects</small></div>${seg("volume", [["low", "Low"], ["medium", "Medium"], ["high", "High"]], settings.volume)}</div>
+    <div class="row"><div>Music</div>${seg("music", [["off", "Off"], ["low", "Low"], ["medium", "Med"], ["high", "High"]], settings.music)}</div>
     <div class="note">Difficulty applies from the next new game.</div>
     <button class="plain" data-act="back">${ICON.back}Back</button>`);
   c.addEventListener("click", (e) => {
     const t = e.target as HTMLElement;
-    if (t.closest("[data-act=back]")) return showMain(opts);
+    if (t.closest("[data-act=back]")) { audio.play("click"); return showMain(opts); }
     const b = t.closest<HTMLElement>("[data-v]"), group = b?.parentElement as HTMLElement | null;
     if (!b || !group?.dataset.key) return;
     const key = group.dataset.key as keyof typeof settings, v = b.dataset.v!;
     if (key === "difficulty") settings.difficulty = v as Difficulty;
+    else if (key === "volume") settings.volume = v as typeof settings.volume;
+    else if (key === "music") settings.music = v as typeof settings.music;
     else (settings as Record<string, unknown>)[key] = v === "on";
     group.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    audio.applySettings();
+    audio.play("click"); // also a preview of the new volume
   });
 }
