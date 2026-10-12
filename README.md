@@ -1,35 +1,54 @@
-日本語版: [README.ja.md](README.ja.md) · Japanese handouts: [workshop/ja/](workshop/ja/README.md)
+# Sands of Ra
 
-# Commando Workshop
+My take on the game from **Davide Pasca's hands-on AI coding workshop** ([original project](https://github.com/dpasca/workshop_commando)).
+The workshop gave everyone the same small shooter to start from and three exercises; everything here was built
+on top of it during and after the workshop, with Claude Code, just for fun.
 
-A small top-down, vertically scrolling shooter used as the starter for a hands-on workshop on
-building game scaffolding with AI coding agents (Claude Code, Codex, OpenCode).
+![The game](docs/game.jpg)
 
-![](docs/screenshot.png)
+## What it is
 
-## Run
+A top-down shooter set in ancient Egypt. You play a pharaoh fighting your way up the Nile to the temple,
+past mummies, sphinxes and the Pharaoh's chariot. You rescue captives, collect cats into an army that
+fights for you, and throw sandstorms.
+
+**The Council of the Gods:** press **E** and time stops. Five Egyptian gods appear in the sky and you can
+type any wish. They grant most of them (and refuse about one in ten, with a joke). A granted wish plays out
+in the game: lightning, stone tombs, portals to the underworld, mummies turned into cats, shields, a flight
+to the temple, even redrawing part of the map. The gods' answers come from an AI (Claude), so every wish is different.
+
+![The Council of the Gods](docs/council.jpg)
+
+## What you need
+
+- [Node.js](https://nodejs.org) (version 20 or newer)
+- [pnpm](https://pnpm.io/installation)
+- Optional, for the gods: the [Claude Code](https://claude.ai/code) app, installed and logged in.
+  Without it the game works, but the gods stay silent.
+
+## How to run it
 
 ```sh
 pnpm install
 pnpm dev
 ```
 
-Controls: **WASD** move · **mouse** aim · **click** fire · **Space / right-click** grenade · **R** restart.
+Then open http://localhost:5173 in your browser.
 
-Rescue the POWs, reach the top. Bunkers and tanks shrug off bullets: use grenades, or a nearby red barrel.
+## Controls
 
-## The exercises
-
-Handouts are in `workshop/` (start with `workshop/README.md`).
-
-1. **Hard-coded** (this branch): the level is a text grid in `src/level.ts`, behaviours are code. Add features and effects.
-2. **Data + editor** (finished version on the `exercise-2` branch): the level and the enemy definitions move to TOML files, with a level editor and hot reload.
-3. **Agent in the editor** (finished version on the `exercise-3` branch): the editor calls a headless coding agent to edit the level on request.
+| Key | Action |
+|---|---|
+| WASD | move |
+| Mouse | aim |
+| Click | shoot |
+| Space or right-click | sandstorm |
+| E | summon the gods |
+| P or Esc | pause (resume, new game, settings) |
+| R | new game |
 
 ## Credits
 
-Sprites and tiles: [Kenney](https://kenney.nl) — *Top-down Shooter* and *Top-Down Tanks*, CC0.
-
-## Licence
-
-The code and handouts are [MIT](LICENSE) licensed. The sprites and tiles keep their own CC0 licence (`public/assets/licenses/`).
+- The original game and workshop: Davide Pasca (MIT licence, see [LICENSE](LICENSE)).
+- Workshop handouts: [workshop/](workshop/).
+- A few sprites: [Kenney](https://kenney.nl) (CC0, see `public/assets/licenses/`).

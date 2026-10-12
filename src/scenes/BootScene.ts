@@ -1,7 +1,8 @@
 import Phaser from "phaser";
+import { makeEgyptArt } from "../art";
 import { TILE } from "../config";
 
-// Loads the Kenney sprites and generates the few textures we draw in code.
+// Loads the remaining Kenney sprites and generates the textures we draw in code (flat Kurzgesagt-like style).
 export class BootScene extends Phaser.Scene {
   constructor() {
     super("boot");
@@ -11,30 +12,31 @@ export class BootScene extends Phaser.Scene {
     this.load.setPath("assets/");
     this.load.spritesheet("tiles", "tiles.png", { frameWidth: TILE, frameHeight: TILE });
     for (const key of [
-      "player", "rifleman", "grenadier", "pow", "tank", "tank_barrel", "bunker_barrel",
-      "sandbag", "tree_large", "tree_small", "barrel_red", "tracks", "scorch",
-      "bullet_player", "bullet_enemy", "shell",
+      "player", "rifleman", "grenadier", "tank", "tank_barrel", "bunker_barrel",
+      "tree_large", "tree_small", "barrel_red", "bullet_player", "shell",
     ]) {
       this.load.image(key, `${key}.png`);
     }
-    for (const color of ["orange", "grey", "white", "yellow"]) {
-      for (let i = 0; i < 6; i++) this.load.image(`smoke_${color}${i}`, `smoke_${color}${i}.png`);
-    }
+    // pow, sandbag, bullet_enemy, scorch, tracks, crate and the smoke_* puffs are drawn in art.ts
   }
 
   create() {
-    this.makeRadial("shadow", 64, 0x000000, 0.55);
+    this.makeRadial("shadow", 64, 0x11143a, 0.5); // soft indigo, never black
     this.makeRadial("flash", 64, 0xfff2b0, 1);
     this.makeRadial("spark", 8, 0xfff0d0, 1);
     this.makeRadial("glow", 32, 0xffffff, 0.6);
     this.makeVignette();
     this.makeExtrudedTileset();
+    makeEgyptArt(this);
 
+    // flat, three-tone: shade, base, highlight
     const g = this.make.graphics({}, false);
-    g.fillStyle(0x3d5a2a).fillCircle(8, 8, 7).fillStyle(0x6b8f4a).fillCircle(6, 6, 3);
+    g.fillStyle(0x11143a).fillCircle(8, 8, 7).fillStyle(0x3a2d6b).fillCircle(7, 7, 6).fillStyle(0x6c5ce7).fillCircle(5.5, 5.5, 2.2);
+    g.fillStyle(0xff5e7e).fillRect(2, 7, 12, 2);
     g.generateTexture("grenade", 16, 16);
     g.clear();
-    g.fillStyle(0x3d5a2a).fillRoundedRect(2, 6, 28, 20, 4).fillStyle(0xe8d27a).fillRect(6, 12, 20, 8);
+    g.fillStyle(0x8f4a2a).fillRoundedRect(2, 6, 28, 20, 6).fillStyle(0xc8733a).fillRoundedRect(2, 6, 26, 18, 6);
+    g.fillStyle(0xffd23f).fillRoundedRect(6, 12, 20, 7, 3.5);
     g.generateTexture("grenade_box", 32, 32);
     g.destroy();
 
@@ -65,9 +67,10 @@ export class BootScene extends Phaser.Scene {
     const w = 512, h = 384;
     const tex = this.textures.createCanvas("vignette", w, h)!;
     const ctx = tex.getContext();
-    const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.35, w / 2, h / 2, w * 0.62);
-    grad.addColorStop(0, "rgba(0,0,0,0)");
-    grad.addColorStop(1, "rgba(0,0,0,0.55)");
+    const grad = ctx.createRadialGradient(w / 2, h / 2, h * 0.4, w / 2, h / 2, w * 0.65);
+    grad.addColorStop(0, "rgba(27,31,75,0)");
+    grad.addColorStop(0.6, "rgba(27,31,75,0.18)");
+    grad.addColorStop(1, "rgba(17,20,58,0.5)");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
     tex.refresh();

@@ -1,5 +1,5 @@
 {
-  "name": "workshop-commando",
+  "name": "sands-of-ra",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -13,6 +13,7 @@
     "phaser": "3.90.0"
   },
   "devDependencies": {
+    "smol-toml": "^1.9.0",
     "typescript": "~5.9.2",
     "vite": "^7.1.2"
   }

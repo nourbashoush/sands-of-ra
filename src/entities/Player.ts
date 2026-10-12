@@ -12,7 +12,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   alive = true;
 
   constructor(private world: GameScene, x: number, y: number) {
-    super(world, x, y, "player");
+    super(world, x, y, "pharaoh");
     world.add.existing(this);
     world.physics.add.existing(this);
     this.setDepth(DEPTH.units);
@@ -55,8 +55,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.world.fx.muzzle(muzzle.x, muzzle.y, aim);
     }
 
-    // blink while invulnerable
-    this.setAlpha(time < this.invulnerableUntil ? (Math.floor(time / 90) % 2 ? 0.35 : 1) : 1);
+    // blink while invulnerable (not under a god's shield: that has its own bubble)
+    this.setAlpha(time < this.invulnerableUntil && time > this.world.shieldUntil ? (Math.floor(time / 90) % 2 ? 0.35 : 1) : 1);
   }
 
   gunTip() {
@@ -67,7 +67,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private throwGrenade() {
-    if (!this.alive || this.world.grenades <= 0) return;
+    if (!this.alive || this.world.grenades <= 0 || this.world.cinematic) return;
     const p = this.world.input.activePointer;
     const target = new Phaser.Math.Vector2(p.worldX - this.x, p.worldY - this.y).limit(PLAYER.grenadeRange);
     this.world.setGrenades(this.world.grenades - 1);
