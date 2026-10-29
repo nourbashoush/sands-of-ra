@@ -236,7 +236,7 @@ export class GameScene extends Phaser.Scene {
   removeEnemy(e: Enemy) {
     if (!e.active) return;
     this.markGone(e);
-    if (e === this.boss) { this.registry.set("boss", null); audio.play("bossDown"); audio.setMood("calm"); this.fx.floatingText(e.x, e.y - 60, "THE PHARAOH HAS FALLEN!", "#f6d77a"); }
+    if (e === this.boss) this.pharaohFallen(e);
     this.addScore(e.score);
     this.fx.floatingText(e.x, e.y - 20, `${e.score}`);
     e.destroy();
@@ -931,18 +931,23 @@ export class GameScene extends Phaser.Scene {
   onEnemyKilled(e: Enemy) {
     this.markGone(e);
     audio.play(e.armored ? "bigExplosion" : "enemyDeath");
-    if (e === this.boss) {
-      this.registry.set("boss", null);
-      audio.play("bossDown");
-      audio.setMood("calm");
-      this.fx.floatingText(e.x, e.y - 60, "THE PHARAOH HAS FALLEN!", "#f6d77a");
-    }
+    if (e === this.boss) this.pharaohFallen(e);
     this.addScore(e.score);
     this.fx.floatingText(e.x, e.y - 20, `${e.score}`);
     if (!(e.armored)) {
       this.fx.explosion(e.x, e.y, 0.35);
       this.leaveWreck(e.x, e.y, e.rotation, "soldier");
     }
+  }
+
+  /** The Pharaoh is the goal: once he falls (killed, or removed by a god) the game is won, after a
+   *  moment to see him go down. */
+  private pharaohFallen(e: Enemy) {
+    this.registry.set("boss", null);
+    audio.play("bossDown");
+    audio.setMood("calm");
+    this.fx.floatingText(e.x, e.y - 60, "THE PHARAOH HAS FALLEN!", "#f6d77a");
+    this.time.delayedCall(1500, () => { if (this.state === "playing") this.win(); });
   }
 
   leaveWreck(x: number, y: number, rotation: number, kind: "tank" | "bunker" | "soldier") {

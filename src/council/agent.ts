@@ -1,6 +1,13 @@
 // Calls the agent through the dev server (server/oracle.ts runs Claude Code headless: an empty temp
 // folder, no tools, no settings). The answer streams in; callers get phases and text as it is written.
 
+/** True once the dev server says Claude Code is installed. Stays false on the hosted game, which has
+ *  no dev server, so the Claude option never shows there. */
+export let claudeAvailable = false;
+if (import.meta.env.DEV) {
+  fetch("/api/oracle").then((r) => r.json()).then((r: { claude?: boolean }) => (claudeAvailable = r.claude === true)).catch(() => {});
+}
+
 export type AgentEvent =
   | { type: "phase"; phase: "summoning" | "listening" | "writing" }
   | { type: "delta"; text: string; all: string };

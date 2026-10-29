@@ -12,6 +12,8 @@ import { cloudBank, godSvg, SCALES } from "./gods";
 import { performDecree, performPrank } from "./powers";
 import { buildCouncilPrompt, type CouncilHistory } from "./prompt";
 import { readDecree } from "./reply";
+import { localCouncil } from "./local";
+import { settings } from "../settings";
 
 // The Council of the Gods (press E). Time stops, the Hall of Ma'at descends, and you make a wish.
 // The scales weigh it (a 50/50 roll, decided when you ask); the agent (Claude Code, headless) is told the
@@ -318,7 +320,7 @@ export class Council {
     this.state = "deliberating";
     audio.play("wish");
     this.root!.className = "deliberating";
-    const started = performance.now(), expected = this.avg(this.model);
+    const started = performance.now(), expected = !pasted && settings.wishes === "model" ? 900 : this.avg(this.model);
     const bar = this.root!.querySelector<SVGCircleElement>(".ring .bar")!;
     const tick = window.setInterval(() => {
       const t = performance.now() - started;
@@ -326,7 +328,10 @@ export class Council {
     }, 100);
 
     let text = pasted, ms = 0;
-    if (!pasted) {
+    if (!pasted && settings.wishes === "model") {
+      // Instant, in the browser; a short pause so the council still seems to deliberate.
+      [text] = await Promise.all([localCouncil(wish, world, granted), new Promise((done) => setTimeout(done, 900))]);
+    } else if (!pasted) {
       this.abort = new AbortController();
       const result = await callAgent(buildCouncilPrompt({ wish, granted, world, history: this.history }), this.model, () => {}, this.abort.signal);
       this.abort = null;

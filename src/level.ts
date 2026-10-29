@@ -10,7 +10,7 @@
 //           an Anubis statue   bt Bastet (cat) statue
 // Units:    .. none   s1 rifleman   s2 grenadier   t1 tank (2x2, anchor = top-left)
 //           b1 bunker   h1 POW (rescue)   g1 grenade pickup   c1 cat (walk into it to add it to your cat army; more are scattered at random)
-//           k1 Pharaoh's chariot boss (drives along its row; the exit opens when it falls)
+//           k1 Pharaoh's chariot boss (drives along its row; the game is won when it falls)
 
 export const LEVEL_NAME = "Crossing the Nile";
 

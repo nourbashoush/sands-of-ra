@@ -68,6 +68,4 @@ if (import.meta.hot) {
   });
 }
 
-if (import.meta.env.DEV) {
-  mountCouncil(game);
-}
+mountCouncil(game); // press E: answered by the built-in model, or by Claude when running locally

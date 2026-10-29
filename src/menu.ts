@@ -1,5 +1,6 @@
 import type Phaser from "phaser";
 import { audio } from "./audio";
+import { claudeAvailable } from "./council/agent";
 import { settings, type Difficulty } from "./settings";
 
 // The pause / game-over menu: Resume, New game (or Play again), Settings. A flat card over the game,
@@ -111,6 +112,7 @@ function showSettings(opts: MenuOptions) {
     <div class="row"><div>Sound<small>or press M any time</small></div>${onOff("sound")}</div>
     <div class="row"><div>Volume<small>sound effects</small></div>${seg("volume", [["low", "Low"], ["medium", "Medium"], ["high", "High"]], settings.volume)}</div>
     <div class="row"><div>Music</div>${seg("music", [["off", "Off"], ["low", "Low"], ["medium", "Med"], ["high", "High"]], settings.music)}</div>
+    ${claudeAvailable ? `<div class="row"><div>Wishes<small>answered by Claude, or the built-in model</small></div>${seg("wishes", [["claude", "Claude"], ["model", "Built-in"]], settings.wishes)}</div>` : ""}
     <div class="note">Difficulty applies from the next new game.</div>
     <button class="plain" data-act="back">${ICON.back}Back</button>`);
   c.addEventListener("click", (e) => {
@@ -122,6 +124,7 @@ function showSettings(opts: MenuOptions) {
     if (key === "difficulty") settings.difficulty = v as Difficulty;
     else if (key === "volume") settings.volume = v as typeof settings.volume;
     else if (key === "music") settings.music = v as typeof settings.music;
+    else if (key === "wishes") settings.wishes = v as typeof settings.wishes;
     else (settings as Record<string, unknown>)[key] = v === "on";
     group.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
     audio.applySettings();

@@ -13,6 +13,9 @@ export const settings = {
   sound: true,
   volume: "medium" as "low" | "medium" | "high",
   music: "medium" as "off" | "low" | "medium" | "high",
+  /** Who answers wishes: the small built-in model (src/council/local.ts), or Claude. Claude can only
+   *  be picked when running locally with Claude Code installed (see claudeAvailable in council/agent.ts). */
+  wishes: "model" as "claude" | "model",
 };
 
 const DIFFICULTY: Record<Difficulty, { lives: number; fireEvery: number }> = {

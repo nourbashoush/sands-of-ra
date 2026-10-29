@@ -7,6 +7,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 // The oracle's back end (dev only, mounted by vite.config.ts). The browser builds the prompt and
 // checks the answer; this only runs Claude Code headless and streams what it writes.
 //
+//   GET  /api/oracle        { claude: true | false }: is Claude Code installed on this computer?
 //   POST /api/oracle        { prompt, model } -> a stream of "data: {json}\n\n" events:
 //                           phase, delta (text as it is written), done (full text, ms), error
 //                           AGENT_MESSAGE lines also to data/agent-messages.md
@@ -36,8 +37,12 @@ function readBody(req: IncomingMessage): Promise<string> {
 
 export function oracleMiddleware() {
   return async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
-    if (req.method !== "POST") return next();
     if (req.url !== "/" && req.url !== "") return next();
+    if (req.method === "GET") {
+      res.setHeader("Content-Type", "application/json");
+      return res.end(JSON.stringify({ claude: findClaude() !== null }));
+    }
+    if (req.method !== "POST") return next();
 
     let input: { prompt?: string; model?: string };
     try {
