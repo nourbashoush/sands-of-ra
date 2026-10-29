@@ -14,6 +14,7 @@ import { buildCouncilPrompt, type CouncilHistory } from "./prompt";
 import { readDecree } from "./reply";
 import { localCouncil } from "./local";
 import { settings } from "../settings";
+import { touch } from "../touch";
 
 // The Council of the Gods (press E). Time stops, the Hall of Ma'at descends, and you make a wish.
 // The scales weigh it (a 50/50 roll, decided when you ask); the agent (Claude Code, headless) is told the
@@ -119,6 +120,7 @@ const STYLE = `
 #council .askbox button svg { width: 18px; height: 18px; }
 #council .askbox button { display: flex; align-items: center; gap: 6px; flex: none; height: 44px; padding: 0 16px; border-radius: 14px; border: 0; cursor: pointer; background: var(--yellow); color: var(--navy); font: 900 14px "Avenir Next", Arial; box-shadow: 0 4px 0 #b88f00; }
 #council .hint { margin-top: 8px; text-align: center; font: 600 11px "Avenir Next", Arial; color: #fff; text-shadow: 0 1px 2px #11143a; }
+#council .hint .leave { cursor: pointer; padding: 8px 4px; }
 #council kbd { font: 700 10px Menlo, monospace; padding: 1px 5px; border-radius: 5px; background: #11143a99; color: #fff; }
 #council.deliberating .dock, #council.verdict .dock { opacity: 0; pointer-events: none; transform: translate(-50%, 30px); transition: all .3s; }
 /* leaving: the entrance in reverse. Gods first, then the clouds roll away, the land and sun go down, the light closes */
@@ -195,6 +197,7 @@ export class Council {
     document.head.append(css);
     window.addEventListener("keydown", (e) => this.onKey(e), true);
     window.addEventListener("resize", () => this.place());
+    this.game.scale.on("resize", () => this.place()); // the game takes a new shape a moment after a phone turns
   }
 
   private get scene() {
@@ -246,7 +249,7 @@ export class Council {
       <div class="bubble"></div>
       <div class="dock">
         <div class="askbox"><input spellcheck="false" placeholder="Speak your wish, mortal…"><button data-act="ask">WISH <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></button></div>
-        <div class="hint"><kbd>Enter</kbd> wish · <kbd>Esc</kbd> leave</div>
+        <div class="hint">${touch.on ? `<span class="leave" data-act="leave"><kbd>✕</kbd> leave</span>` : `<kbd>Enter</kbd> wish · <span class="leave" data-act="leave"><kbd>Esc</kbd> leave</span>`}</div>
       </div>
       <div class="verdict-banner"><b></b><span></span></div>
       <div class="flash"></div>`;
@@ -281,6 +284,7 @@ export class Council {
     const act = t.closest<HTMLElement>("[data-act]")?.dataset.act;
     if (act === "ask") void this.ask();
     if (act === "cancel") this.cancel();
+    if (act === "leave" && this.state === "asking") this.close(); // a tap target for touch screens, which have no Esc
   }
 
   private onKey(e: KeyboardEvent) {

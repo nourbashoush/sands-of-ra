@@ -3,16 +3,25 @@ import Phaser from "phaser";
 
 export const TILE = 64;
 export const VIEW_W = 1024; // 16 columns
-// The world is 16 columns wide and always fills the window's width; the visible height follows
-// the window's shape (read once at load), between 7.5 and 16 rows.
-export const VIEW_H = typeof window === "undefined"
-  ? 768
-  : Math.round(Phaser.Math.Clamp((VIEW_W * window.innerHeight) / window.innerWidth, 480, 1024));
+// The world is 16 columns wide and always fills the game area's width; the visible height follows
+// the area's shape, between 7.5 and 16 rows. Both change when a phone turns (see fitView).
+export let VIEW_H = 768;
 // Render resolution: the canvas has RES device pixels per game pixel (cameras zoom by RES),
 // so the game is drawn sharp on large and high-DPI screens instead of being stretched up.
-export const RES = typeof window === "undefined"
-  ? 1
-  : Phaser.Math.Clamp(Math.ceil(((window.innerWidth * window.devicePixelRatio) / VIEW_W) * 4) / 4, 1, 3);
+export let RES = 1;
+/** Fit VIEW_H and RES to the game area's current shape. Returns true if either changed. */
+export function fitView(): boolean {
+  if (typeof window === "undefined") return false;
+  const area = document.getElementById("game");
+  const w = area?.clientWidth || window.innerWidth, h = area?.clientHeight || window.innerHeight;
+  const viewH = Math.round(Phaser.Math.Clamp((VIEW_W * h) / w, 480, 1024));
+  const res = Phaser.Math.Clamp(Math.ceil(((w * window.devicePixelRatio) / VIEW_W) * 4) / 4, 1, 3);
+  if (viewH === VIEW_H && res === RES) return false;
+  VIEW_H = viewH;
+  RES = res;
+  return true;
+}
+fitView();
 // The game's name (the level has its own, from the level file: "Crossing the Nile").
 export const GAME_TITLE = "Sands of Ra";
 

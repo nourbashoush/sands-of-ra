@@ -641,7 +641,7 @@ function cartouche(ctx: Ctx, x: number, y: number, w: number, h: number) {
 }
 
 /** The HUD's floating stat pills (no frame: the game fills the screen), drawn at full resolution. */
-function makeFrame(scene: Phaser.Scene) {
+export function makeFrame(scene: Phaser.Scene) {
   canvas(scene, "tomb_frame", Math.round(VIEW_W * RES), Math.round(VIEW_H * RES), (ctx) => {
     ctx.scale(RES, RES);
     for (const [x, w] of Object.values(CARTOUCHES)) {

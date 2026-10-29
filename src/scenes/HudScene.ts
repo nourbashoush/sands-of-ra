@@ -3,9 +3,11 @@ import { CARTOUCHES, FRAME, GAME_TITLE, RES, STAT_BAR, VIEW_H, VIEW_W } from "..
 import type { Level } from "../levelFormat";
 import { freshLevel } from "../freshLevel";
 import { closeMenu, openMenu } from "../menu";
+import { touch } from "../touch";
 import { settings } from "../settings";
 import { audio } from "../audio";
 import { FONT } from "../style";
+import { makeFrame } from "../art";
 
 type Boss = { name: string; hp: number; max: number } | null;
 type Hud = { score: number; lives: number; grenades: number; pows: number; powsTotal: number; cats: number; catsTotal: number };
@@ -24,6 +26,7 @@ export class HudScene extends Phaser.Scene {
   private bossFill!: Phaser.GameObjects.Graphics;
   private currentBanner?: Phaser.GameObjects.Container;
   private errorPlaque?: Phaser.GameObjects.Container;
+  private frame!: Phaser.GameObjects.Image;
   private paused = false;
   private ended = false;
 
@@ -34,7 +37,7 @@ export class HudScene extends Phaser.Scene {
   create(data?: { quiet?: boolean }) {
     const LEVEL_NAME = (this.registry.get("level") as Level).name;
     this.cameras.main.setZoom(RES).setOrigin(0, 0);
-    this.add.image(0, 0, "tomb_frame").setOrigin(0).setScale(1 / RES); // drawn at full resolution
+    this.frame = this.add.image(0, 0, "tomb_frame").setOrigin(0).setScale(1 / RES); // drawn at full resolution
     const carved = (x: number, y: number, size: number) =>
       this.add.text(x, y, "", { fontFamily: BAND_FONT, fontSize: `${size}px`, fontStyle: "bold", color: INK })
         .setOrigin(0.5).setShadow(0, 1.5, "rgba(17,20,58,0.6)", 0).setResolution(RES);
@@ -51,12 +54,13 @@ export class HudScene extends Phaser.Scene {
       this.stats[key].setX(x + w / 2 - STAT_BAR.h / 4); // centred left of the knot bar
     }
     this.namePill = this.add.graphics()
-      .fillStyle(0x11143a, 0.35).fillRoundedRect(VIEW_W / 2 - 150 + 2, VIEW_H - 42 + 4, 300, 30, 15)
-      .fillStyle(0x11143a, 0.85).fillRoundedRect(VIEW_W / 2 - 150, VIEW_H - 42, 300, 30, 15);
-    this.bandName = carved(VIEW_W / 2, VIEW_H - 27, 17).setText(`· ${LEVEL_NAME.toUpperCase()} ·`).setColor(YELLOW);
+      .fillStyle(0x11143a, 0.35).fillRoundedRect(VIEW_W / 2 - 150 + 2, 4, 300, 30, 15)
+      .fillStyle(0x11143a, 0.85).fillRoundedRect(VIEW_W / 2 - 150, 0, 300, 30, 15);
+    this.bandName = carved(VIEW_W / 2, 0, 17).setText(`· ${LEVEL_NAME.toUpperCase()} ·`).setColor(YELLOW);
 
     this.refresh(this.registry.get("hud"));
     this.makeBossBar();
+    this.placeBottom();
     this.showLevelError(this.registry.get("levelError"));
     const onChange = (_p: unknown, key: string, value: Hud & Boss) => {
       if (key === "hud") this.refresh(value);
@@ -75,6 +79,7 @@ export class HudScene extends Phaser.Scene {
     this.ended = false;
     const kb = this.input.keyboard!;
     kb.on("keydown-P", () => this.togglePause());
+    touch.pause = () => this.togglePause();
     kb.on("keydown-ESC", () => this.togglePause());
     kb.on("keydown-R", () => { if (this.paused) this.newGame(); }); // after a game ends, GameScene handles R itself
     closeMenu(); // a new game: no menu left over
@@ -85,7 +90,7 @@ export class HudScene extends Phaser.Scene {
     game.events.once("boss", () => this.banner("PHARAOH", "his chariot guards the temple gate", 1800));
 
     // game first, then the level: "SANDS OF RA" / "LEVEL 1 · CROSSING THE NILE"
-    if (!data?.quiet) this.banner(GAME_TITLE.toUpperCase(), "WASD move · mouse aim · click fire · SPACE sandstorm · E summon the gods · P pause", 1800, `LEVEL 1  ·  ${LEVEL_NAME.toUpperCase()}`);
+    if (!data?.quiet) this.banner(GAME_TITLE.toUpperCase(), touch.on ? "left stick move · right stick aim and fire · STORM · GODS" : "WASD move · mouse aim · click fire · SPACE sandstorm · E summon the gods · P pause", 1800, `LEVEL 1  ·  ${LEVEL_NAME.toUpperCase()}`);
   }
 
   private refresh(h?: Hud) {
@@ -141,7 +146,7 @@ export class HudScene extends Phaser.Scene {
 
   /** The Pharaoh's health, set into the bottom band in place of the level name. */
   private makeBossBar() {
-    const w = 420, y = VIEW_H - 27;
+    const w = 420;
     const label = this.add.text(-w / 2 - 14, 0, "PHARAOH", { fontFamily: BAND_FONT, fontSize: "20px", fontStyle: "bold", color: YELLOW })
       .setOrigin(1, 0.5).setShadow(0, 1.5, "rgba(17,20,58,0.6)", 0).setResolution(RES);
     const groove = this.add.graphics().fillStyle(0x11143a, 0.85).fillRoundedRect(-w / 2 - 130, -17, w + 145, 34, 17).fillStyle(0x11143a).fillRoundedRect(-w / 2 - 5, -10, w + 10, 20, 10);
@@ -149,7 +154,28 @@ export class HudScene extends Phaser.Scene {
     this.bossFill = this.add.graphics({ x: -w / 2 })
       .fillStyle(0xb8324a).fillRoundedRect(0, -6, w, 12, 6)
       .fillStyle(0xff5e7e).fillRoundedRect(0, -6, w, 8, { tl: 6, tr: 6, bl: 3, br: 3 });
-    this.bossBar = this.add.container(VIEW_W / 2 + 50, y, [label, groove, this.bossFill]).setVisible(false);
+    this.bossBar = this.add.container(VIEW_W / 2 + 50, 0, [label, groove, this.bossFill]).setVisible(false);
+  }
+
+  /** The level name and the Pharaoh's health sit on the bottom edge, wherever that is. */
+  private placeBottom() {
+    this.namePill.y = VIEW_H - 42;
+    this.bandName.y = VIEW_H - 27;
+    this.bossBar.y = VIEW_H - 27;
+  }
+
+  /** The phone turned: refit the HUD to the new VIEW_H and RES. */
+  refit() {
+    this.cameras.main.setZoom(RES);
+    makeFrame(this); // the stat pills, redrawn at the new resolution
+    this.frame.setTexture("tomb_frame").setScale(1 / RES);
+    this.placeBottom();
+    this.currentBanner?.setPosition(VIEW_W / 2, VIEW_H / 2 - 40);
+    const sharpen = (list: Phaser.GameObjects.GameObject[]): void => list.forEach((o) => {
+      if (o instanceof Phaser.GameObjects.Text) o.setResolution(RES);
+      else if (o instanceof Phaser.GameObjects.Container) sharpen(o.list);
+    });
+    sharpen(this.children.list);
   }
 
   private refreshBoss(b: Boss) {

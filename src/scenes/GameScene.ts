@@ -63,6 +63,7 @@ export class GameScene extends Phaser.Scene {
   private boss: Chariot | null = null;
   private nextGateWarning = 0;
   private state: "playing" | "dead" | "won" | "over" = "playing";
+  private screen: Phaser.GameObjects.GameObject[] = []; // the screen-space overlays, rebuilt by fitScreen
 
   constructor() {
     super("game");
@@ -130,20 +131,10 @@ export class GameScene extends Phaser.Scene {
 
     // camera: only scrolls up, like the arcade original
     const cam = this.cameras.main;
-    // draw at full device resolution. The camera zooms about its centre (a top-left origin breaks
-    // Phaser's tile culling), so scroll is offset; use viewTop for the top of the visible world.
-    cam.setZoom(RES);
     const shake = cam.shake.bind(cam); // the Settings panel can turn screen shake off
     cam.shake = ((...a: Parameters<typeof shake>) => (settings.screenShake ? shake(...a) : cam)) as typeof cam.shake;
-    cam.scrollX = -(VIEW_W * (RES - 1)) / 2;
-    this.viewTop = resume ? Phaser.Math.Clamp(resume.viewTop, 0, worldH - VIEW_H) : worldH - VIEW_H;
-    // colour grade + vignette as screen-space overlays (works on any renderer)
-    // Screen-space overlays sit outside the scroll, but the camera still zooms them about its centre:
-    // shift them by the zoom's offset or they cover only the top-left quarter of the screen.
-    const ox = (VIEW_W * (RES - 1)) / 2, oy = (VIEW_H * (RES - 1)) / 2;
-    this.add.rectangle(ox, oy, VIEW_W, VIEW_H, 0xffe2b8).setOrigin(0).setScrollFactor(0).setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(DEPTH.screen);
-    this.add.image(ox + VIEW_W / 2, oy + VIEW_H / 2, "vignette").setDisplaySize(VIEW_W, VIEW_H).setScrollFactor(0).setDepth(DEPTH.screen + 1);
-    this.fx.desertAir(VIEW_W, VIEW_H);
+    this.screen = [];
+    this.fitScreen(resume ? resume.viewTop : worldH - VIEW_H);
 
     this.score = resume?.score ?? 0;
     this.lives = resume?.lives ?? difficulty().lives;
@@ -364,6 +355,34 @@ export class GameScene extends Phaser.Scene {
     if (this.state !== "playing" && this.state !== "dead") return undefined; // not after a win or game over
     return { x: this.player.x, y: this.player.y, viewTop: this.viewTop, score: this.score, lives: this.lives,
       grenades: this.grenades, pows: this.powsRescued, cats: this.army.length, gone: [...this.gone] };
+  }
+
+  /**
+   * Fit the camera and the screen-space overlays to the current VIEW_H and RES (at the start, and
+   * again when a phone turns), with `top` the world y to keep at the top of the screen.
+   */
+  fitScreen(top: number) {
+    // draw at full device resolution. The camera zooms about its centre (a top-left origin breaks
+    // Phaser's tile culling), so scroll is offset; use viewTop for the top of the visible world.
+    const cam = this.cameras.main;
+    cam.setZoom(RES);
+    cam.scrollX = -(VIEW_W * (RES - 1)) / 2;
+    this.viewTop = Phaser.Math.Clamp(top, 0, this.rows * TILE - VIEW_H);
+    // colour grade + vignette as screen-space overlays (works on any renderer)
+    // Screen-space overlays sit outside the scroll, but the camera still zooms them about its centre:
+    // shift them by the zoom's offset or they cover only the top-left quarter of the screen.
+    for (const o of this.screen) o.destroy();
+    const ox = (VIEW_W * (RES - 1)) / 2, oy = (VIEW_H * (RES - 1)) / 2;
+    this.screen = [
+      this.add.rectangle(ox, oy, VIEW_W, VIEW_H, 0xffe2b8).setOrigin(0).setScrollFactor(0).setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(DEPTH.screen),
+      this.add.image(ox + VIEW_W / 2, oy + VIEW_H / 2, "vignette").setDisplaySize(VIEW_W, VIEW_H).setScrollFactor(0).setDepth(DEPTH.screen + 1),
+      ...this.fx.desertAir(VIEW_W, VIEW_H),
+    ];
+  }
+
+  /** The phone turned: refit the screen around the player, where the camera would follow to. */
+  refit() {
+    this.fitScreen(this.player.y - VIEW_H * 0.55);
   }
 
   /** World y at the top of the screen (the camera zooms about its centre, so scrollY is offset). */

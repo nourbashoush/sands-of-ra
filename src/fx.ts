@@ -144,12 +144,12 @@ export class Fx {
   }
 
   /** Screen-space desert air: warm sunlight from the top-left and sand blowing across. */
-  desertAir(w: number, h: number) {
+  desertAir(w: number, h: number): Phaser.GameObjects.GameObject[] {
     // screen-space: offset for the camera's zoom about its centre (see GameScene's overlays)
     const ox = (w * (RES - 1)) / 2, oy = (h * (RES - 1)) / 2;
-    this.scene.add.image(ox, oy, "glow").setScrollFactor(0).setDepth(DEPTH.screen - 1)
+    const glow = this.scene.add.image(ox, oy, "glow").setScrollFactor(0).setDepth(DEPTH.screen - 1)
       .setScale(26).setTint(0xffd23f).setAlpha(0.16).setBlendMode(Phaser.BlendModes.ADD);
-    this.scene.add.particles(ox, oy, "streak", {
+    const sand = this.scene.add.particles(ox, oy, "streak", {
       x: { min: -200, max: w * 0.6 },
       y: { min: -40, max: h },
       speedX: { min: 260, max: 520 },
@@ -160,6 +160,7 @@ export class Fx {
       lifespan: 2200,
       frequency: 45,
     }).setScrollFactor(0).setDepth(DEPTH.canopy + 2);
+    return [glow, sand];
   }
 
   /**

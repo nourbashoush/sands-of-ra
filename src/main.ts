@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { RES, VIEW_H, VIEW_W } from "./config";
+import { RES, VIEW_H, VIEW_W, fitView } from "./config";
 import { BootScene } from "./scenes/BootScene";
 import { GameScene } from "./scenes/GameScene";
 import { HudScene } from "./scenes/HudScene";
@@ -7,6 +7,7 @@ import { LEVEL_NAME, TERRAIN, UNITS } from "./level";
 import { parseGrid, type Checked, type Level } from "./levelFormat";
 import { performDecree, performPrank } from "./council/powers";
 import { mountCouncil } from "./council/ui";
+import { mountTouch, touch } from "./touch";
 
 // The level comes from data/levels/*.toml through the dev server; a production build
 // (no server) falls back to the copy bundled in src/level.ts.
@@ -33,6 +34,7 @@ await new Promise<void>((ready) => {
   const poll = setInterval(() => { if (sized()) { clearInterval(poll); ready(); } }, 250);
 });
 
+fitView(); // again, now the touch controls have taken their space below the game
 const game = new Phaser.Game({
   type: Phaser.WEBGL,
   parent: "game",
@@ -41,7 +43,7 @@ const game = new Phaser.Game({
   backgroundColor: "#1d2b1d",
   pixelArt: false,
   physics: { default: "arcade", arcade: { debug: false } },
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.NO_CENTER }, // #game centres it; Phaser centring too pushes it off-centre after a rotation
   scene: [BootScene, GameScene, HudScene],
   callbacks: {
     preBoot: (g) => {
@@ -68,4 +70,20 @@ if (import.meta.hot) {
   });
 }
 
-mountCouncil(game); // press E: answered by the built-in model, or by Claude when running locally
+// A phone turned (or the window changed shape): the game takes the new shape in place. Nothing restarts.
+let fitting: ReturnType<typeof setTimeout> | undefined;
+new ResizeObserver(() => {
+  clearTimeout(fitting);
+  fitting = setTimeout(() => {
+    if (!fitView()) return;
+    game.scale.setGameSize(Math.round(VIEW_W * RES), Math.round(VIEW_H * RES));
+    for (const key of ["game", "hud"] as const) {
+      const scene = game.scene.getScene(key) as (GameScene | HudScene) | null;
+      if (scene?.sys.isActive() || scene?.sys.isPaused()) scene.refit();
+    }
+  }, 150);
+}).observe(document.getElementById("game")!);
+
+const council = mountCouncil(game); // press E: answered by the built-in model, or by Claude when running locally
+touch.gods = () => council.open();
+mountTouch();

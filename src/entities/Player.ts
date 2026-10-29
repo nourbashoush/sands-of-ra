@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { PLAYER } from "../config";
 import { DEPTH } from "../fx";
 import type { GameScene } from "../scenes/GameScene";
+import { touch } from "../touch";
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   declare body: Phaser.Physics.Arcade.Body;
@@ -31,6 +32,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       if (p.rightButtonDown()) this.throwGrenade();
     });
     world.input.mouse?.disableContextMenu();
+    touch.storm = () => this.throwGrenade();
   }
 
   update(time: number) {
@@ -40,14 +42,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const k = this.keys;
     const vx = (k.right.isDown || k.d.isDown ? 1 : 0) - (k.left.isDown || k.a.isDown ? 1 : 0);
     const vy = (k.down.isDown || k.s.isDown ? 1 : 0) - (k.up.isDown || k.w.isDown ? 1 : 0);
-    const v = new Phaser.Math.Vector2(vx, vy).normalize().scale(PLAYER.speed);
+    const v = touch.on && (vx || vy) === 0
+      ? new Phaser.Math.Vector2(touch.move.x, touch.move.y).limit(1).scale(PLAYER.speed) // the left stick: push further, go faster
+      : new Phaser.Math.Vector2(vx, vy).normalize().scale(PLAYER.speed);
     this.body.setVelocity(v.x, v.y);
 
-    const p = this.world.input.activePointer;
-    const aim = Phaser.Math.Angle.Between(this.x, this.y, p.worldX, p.worldY);
+    let aim: number, firing: boolean;
+    if (touch.on) {
+      // the right stick aims; with it untouched, face the way you're walking
+      const stick = touch.aim.x || touch.aim.y ? touch.aim : v.lengthSq() > 100 ? v : null;
+      aim = stick ? Math.atan2(stick.y, stick.x) : this.rotation;
+      firing = touch.firing;
+    } else {
+      const p = this.world.input.activePointer;
+      aim = Phaser.Math.Angle.Between(this.x, this.y, p.worldX, p.worldY);
+      firing = p.leftButtonDown();
+    }
     this.setRotation(aim);
 
-    if (p.leftButtonDown() && time - this.lastShot > PLAYER.fireInterval) {
+    if (firing && time - this.lastShot > PLAYER.fireInterval) {
       this.lastShot = time;
       const muzzle = this.gunTip();
       const angle = aim + Phaser.Math.FloatBetween(-PLAYER.bulletSpread, PLAYER.bulletSpread);
@@ -69,7 +82,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private throwGrenade() {
     if (!this.alive || this.world.grenades <= 0 || this.world.cinematic) return;
     const p = this.world.input.activePointer;
-    const target = new Phaser.Math.Vector2(p.worldX - this.x, p.worldY - this.y).limit(PLAYER.grenadeRange);
+    const target = touch.on
+      ? new Phaser.Math.Vector2(Math.cos(this.rotation), Math.sin(this.rotation)).scale(PLAYER.grenadeRange) // as far as it goes, the way you face
+      : new Phaser.Math.Vector2(p.worldX - this.x, p.worldY - this.y).limit(PLAYER.grenadeRange);
     this.world.setGrenades(this.world.grenades - 1);
     this.world.lobGrenade("player", this.x, this.y, this.x + target.x, this.y + target.y);
   }
