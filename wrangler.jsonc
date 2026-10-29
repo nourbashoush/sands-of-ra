@@ -1,0 +1,9 @@
+// How Cloudflare serves the game: the files Vite builds into dist/, as they are. No server code.
+// Cloudflare runs `pnpm run build`, then `npx wrangler deploy`, on every push to master.
+{
+	"name": "sands-of-ra",
+	"compatibility_date": "2026-10-01",
+	"assets": {
+		"directory": "./dist"
+	}
+}
